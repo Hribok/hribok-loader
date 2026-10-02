@@ -1,6 +1,9 @@
 /**
- * Hribok — DIAGNOSTIC TEST
+ * Hribok — DIAGNOSTIC TEST v2
  * Мета: з'ясувати, які методи гри викликаються
+ *
+ * У консолі введи:
+ *   d() — показати числа
  */
 
 (function() {
@@ -33,7 +36,7 @@
 
             const ctx = UnityWebModkit.Runtime.createPlugin({
                 name: 'HribokDiag',
-                version: '1.0.0',
+                version: '2.0.0',
                 referencedAssemblies: [
                     'GameAssembly.dll', 'mscorlib.dll', 'Assembly-CSharp.dll',
                     'UnityEngine.CoreModule.dll', 'UnityEngine.PhysicsModule.dll',
@@ -49,16 +52,25 @@
                 { type: 'PlayerInput', method: 'HandleDesktopInput' },
                 { type: 'PlayerInput', method: 'HandleGamepadInput' },
                 { type: 'PlayerInput', method: 'GetActionDown' },
+                { type: 'PlayerInput', method: 'GetKey' },
+                { type: 'PlayerInput', method: 'GetKeyDown' },
                 { type: 'ColyShooter', method: 'Update' },
+                { type: 'ColyShooter', method: 'TryShoot' },
+                { type: 'ColyShooter', method: 'IsAbleToShoot' },
+                { type: 'ColyShooter', method: 'ReloadAllGunsImmediate' },
                 { type: 'ColyTransform', method: 'UpdateLocalPlayer' },
                 { type: 'ColyTransform', method: 'Update' },
+                { type: 'ColyTransform', method: 'SendPositionUpdate' },
+                { type: 'ColyTransform', method: 'SetAirLocal' },
                 { type: 'AimManager', method: 'Update' },
                 { type: 'AimManager', method: 'SetAiming' },
+                { type: 'AimManager', method: 'UpdateTargetFOVs' },
                 { type: 'Crosshair', method: 'Update' },
                 { type: 'Bullet', method: 'Update' },
+                { type: 'Bullet', method: 'OnSpawn' },
             ];
 
-            // Лічильники для кожного методу
+            // Лічильники
             const counters = {};
             methodsToTest.forEach(m => { counters[m.type + '.' + m.method] = 0; });
 
@@ -73,7 +85,6 @@
                     }, function (self) {
                         const key = m.type + '.' + m.method;
                         counters[key]++;
-                        window._hribokCounters = counters;
                     });
                     log('✓ Hooked ' + m.type + '.' + m.method);
                 } catch (e) {
@@ -81,16 +92,26 @@
                 }
             });
 
-            log('All hooks registered. Зайди в матч і чекай 5 сек.');
+            // Робимо лічильники глобальними
+            window._hribokCounters = counters;
 
-            // Кожні 3 секунди виводимо статистику
-            setInterval(() => {
+            // Функція для перевірки в консолі
+            window.d = function() {
                 console.log('========== [Hribok Counter] ==========');
                 Object.keys(counters).forEach(k => {
                     console.log('  ' + k + ': ' + counters[k]);
                 });
                 console.log('======================================');
-            }, 3000);
+                return counters;
+            };
+
+            // Псевдонім
+            window.hribokDiag = function() {
+                return window.d();
+            };
+
+            log('All hooks registered.');
+            log('У консолі введи: d() — показати числа.');
 
         } catch (e) {
             err('Init failed: ' + e.message);
