@@ -1,15 +1,14 @@
 /**
  * Hribok — veck.io cheat
- * Version: 2.0.1
+ * Version: 2.0.3
  *
- * Main: loads UnityWebModkit, creates plugin, loads all UI modules, renders menu.
- * Fixed: loadScript now passes real window to modules (so they can access window.preact)
+ * Fixed: loadScript uses __hribokOriginalFetch (bypasses UnityWebModkit Preloader)
  */
 
 (function () {
     'use strict';
 
-    const HRIBOK_VERSION = '2.0.1';
+    const HRIBOK_VERSION = '2.0.3';
     const LOG_HEAD = 'color: #FF0033; font-weight: bold;';
     const LOG_OK = 'color: #00FF88;';
     const LOG_WARN = 'color: #FFB300;';
@@ -36,14 +35,16 @@
         });
     }
 
-    // FIXED: pass real window to loaded code
+    // FIXED: use original fetch (bypasses UnityWebModkit Preloader)
     async function loadScript(url) {
         try {
-            const res = await fetch(url + '?t=' + Date.now());
+            const fetchFn = window.__hribokOriginalFetch || window.fetch;
+            const res = await fetchFn(url + '?t=' + Date.now());
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const code = await res.text();
             const fn = new Function('window', 'document', 'globalThis', 'console', code);
             fn.call(window, window, document, window, console);
+            log('Loaded: ' + url.split('/').pop());
             return true;
         } catch (e) {
             err('Failed to load: ' + url, e);
@@ -51,13 +52,19 @@
         }
     }
 
-    async function loadExternalScript(url) {
+    // Load Preact via <script> (unpkg — no Preloader)
+    function loadPreact() {
         return new Promise((resolve, reject) => {
-            if (document.querySelector('script[src="' + url + '"]')) return resolve();
             const s = document.createElement('script');
-            s.src = url;
-            s.onload = () => resolve();
-            s.onerror = () => reject(new Error('Failed to load: ' + url));
+            s.src = 'https://unpkg.com/preact@10.19.3/dist/preact.min.js';
+            s.onload = () => {
+                const s2 = document.createElement('script');
+                s2.src = 'https://unpkg.com/preact@10.19.3/hooks/dist/hooks.umd.js';
+                s2.onload = () => resolve();
+                s2.onerror = () => reject(new Error('hooks failed'));
+                document.head.appendChild(s2);
+            };
+            s.onerror = () => reject(new Error('preact failed'));
             document.head.appendChild(s);
         });
     }
@@ -444,15 +451,14 @@
 
             // Load Preact
             log('Loading Preact...');
-            await loadExternalScript('https://unpkg.com/preact@10.19.3/dist/preact.min.js');
-            await loadExternalScript('https://unpkg.com/preact@10.19.3/hooks/dist/hooks.umd.js');
+            await loadPreact();
 
             if (!window.preact || !window.preactHooks) {
                 throw new Error('Preact failed to load');
             }
             log('Preact loaded');
 
-            // Load UI modules SEQUENTIALLY (order matters!)
+            // Load UI modules (via __hribokOriginalFetch — bypasses Preloader)
             log('Loading UI modules...');
             await loadScript(BASE + '/scripts/veck_ui_themes.js');
             await loadScript(BASE + '/scripts/veck_ui_components.js');
