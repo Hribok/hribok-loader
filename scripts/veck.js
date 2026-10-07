@@ -1,14 +1,15 @@
 /**
  * Hribok — veck.io cheat
- * Version: 2.0.0
+ * Version: 2.0.1
  *
  * Main: loads UnityWebModkit, creates plugin, loads all UI modules, renders menu.
+ * Fixed: loadScript now passes real window to modules (so they can access window.preact)
  */
 
 (function () {
     'use strict';
 
-    const HRIBOK_VERSION = '2.0.0';
+    const HRIBOK_VERSION = '2.0.1';
     const LOG_HEAD = 'color: #FF0033; font-weight: bold;';
     const LOG_OK = 'color: #00FF88;';
     const LOG_WARN = 'color: #FFB300;';
@@ -35,13 +36,14 @@
         });
     }
 
+    // FIXED: pass real window to loaded code
     async function loadScript(url) {
         try {
             const res = await fetch(url + '?t=' + Date.now());
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const code = await res.text();
-            const fn = new Function(code);
-            fn.call(window);
+            const fn = new Function('window', 'document', 'globalThis', 'console', code);
+            fn.call(window, window, document, window, console);
             return true;
         } catch (e) {
             err('Failed to load: ' + url, e);
@@ -61,7 +63,7 @@
     }
 
     // ============================================================
-    // STATE — every option that UI can change
+    // STATE
     // ============================================================
     const state = {
         visible: false,
@@ -95,7 +97,7 @@
             fastReload: false, fastSwitch: false, infiniteAmmo: false, infiniteRange: false,
             noRecoil: false, noSpread: false, noPunch: false, fireRate: false,
             noAbilityCooldown: false, statTrak: false, nameTag: false, sticker: false,
-            float: 0, pattern: 0, wear: 'Factory New', quality: 'Normal', autoBuy: false,
+            float: 0, pattern: 0, wear: 'Factory New', quality: 'Normal', autoBuy: false, autoPistol: false,
         },
         visuals: {
             noFlash: false, noSmoke: false, transparentShield: false, fullbright: false,
@@ -281,7 +283,6 @@
             const [pos, setPos] = useState({ x: null, y: null });
             const dragRef = useRef({ dragging: false, offsetX: 0, offsetY: 0 });
 
-            // Force re-render
             const [, forceUpdate] = useState(0);
             const setState = () => forceUpdate(x => x + 1);
 
@@ -314,7 +315,6 @@
                 e.preventDefault();
             };
 
-            // Touchpad / wheel scroll for menu dragging alternative
             useEffect(() => {
                 const onMouseMove = (e) => {
                     if (dragRef.current.dragging) {
@@ -353,7 +353,6 @@
                 { id: 'unique', label: 'Hribok Unique', comp: T.UniqueTab },
                 { id: 'effects', label: 'Effects', comp: T.EffectsTab },
                 { id: 'preview', label: 'Preview', comp: T.PreviewTab },
-                { id: 'misc', label: 'Misc', comp: T.MiscTab },
                 { id: 'players', label: 'Players', comp: T.PlayersTab },
                 { id: 'configs', label: 'Configs', comp: T.ConfigsTab },
                 { id: 'settings', label: 'Settings', comp: T.SettingsTab },
@@ -392,7 +391,6 @@
                         ActiveComp ? h(ActiveComp, { state: state, setState: setState }) : h('div', { class: 'hb-placeholder' }, 'Tab not found')
                     ),
                 ]),
-                // Preview window (separate)
                 (state.preview.enabled && PreviewWindow) ?
                     h(PreviewWindow, { key: 'preview', state: state, setState: setState }) : null,
             ]);
@@ -454,17 +452,15 @@
             }
             log('Preact loaded');
 
-            // Load UI modules (parallel)
+            // Load UI modules SEQUENTIALLY (order matters!)
             log('Loading UI modules...');
-            await Promise.all([
-                loadScript(BASE + '/scripts/veck_ui_themes.js'),
-                loadScript(BASE + '/scripts/veck_ui_components.js'),
-                loadScript(BASE + '/scripts/veck_ui_tabs_core.js'),
-                loadScript(BASE + '/scripts/veck_ui_tabs_extra.js'),
-                loadScript(BASE + '/scripts/veck_ui_tabs_unique.js'),
-                loadScript(BASE + '/scripts/veck_ui_tabs_system.js'),
-                loadScript(BASE + '/scripts/veck_ui_preview.js'),
-            ]);
+            await loadScript(BASE + '/scripts/veck_ui_themes.js');
+            await loadScript(BASE + '/scripts/veck_ui_components.js');
+            await loadScript(BASE + '/scripts/veck_ui_tabs_core.js');
+            await loadScript(BASE + '/scripts/veck_ui_tabs_extra.js');
+            await loadScript(BASE + '/scripts/veck_ui_tabs_unique.js');
+            await loadScript(BASE + '/scripts/veck_ui_tabs_system.js');
+            await loadScript(BASE + '/scripts/veck_ui_preview.js');
             log('UI modules loaded');
 
             // Apply theme
@@ -472,11 +468,6 @@
                 const savedTheme = localStorage.getItem('hribok-theme') || 'red';
                 window.HribokTheme.apply(savedTheme);
             }
-
-            // Init
-            if (window.HribokComponents && window.HribokComponents.init) window.HribokComponents.init();
-            if (window.HribokTabs && window.HribokTabs.init) window.HribokTabs.init();
-            if (window.HribokPreview && window.HribokPreview.init) window.HribokPreview.init();
 
             // Inject styles
             injectStyles();
