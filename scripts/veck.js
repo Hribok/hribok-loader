@@ -1,14 +1,14 @@
 /**
  * Hribok — veck.io cheat
- * Version: 2.0.3
+ * Version: 2.0.1
  *
- * Fixed: loadScript uses __hribokOriginalFetch (bypasses UnityWebModkit Preloader)
+ * Fixed: loadScript uses GM_xmlhttpRequest (from hribok.user.js) to bypass Preloader.
  */
 
 (function () {
     'use strict';
 
-    const HRIBOK_VERSION = '2.0.3';
+    const HRIBOK_VERSION = '2.0.1';
     const LOG_HEAD = 'color: #FF0033; font-weight: bold;';
     const LOG_OK = 'color: #00FF88;';
     const LOG_WARN = 'color: #FFB300;';
@@ -35,13 +35,18 @@
         });
     }
 
-    // FIXED: use original fetch (bypasses UnityWebModkit Preloader)
+    // Uses GM_xmlhttpRequest (from hribok.user.js) — bypasses Preloader entirely
     async function loadScript(url) {
         try {
-            const fetchFn = window.__hribokOriginalFetch || window.fetch;
-            const res = await fetchFn(url + '?t=' + Date.now());
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const code = await res.text();
+            let code;
+            if (window.__hribokGmFetch) {
+                code = await window.__hribokGmFetch(url + '?t=' + Date.now());
+            } else {
+                warn('GM_xmlhttpRequest not available, falling back to fetch');
+                const res = await fetch(url + '?t=' + Date.now());
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                code = await res.text();
+            }
             const fn = new Function('window', 'document', 'globalThis', 'console', code);
             fn.call(window, window, document, window, console);
             log('Loaded: ' + url.split('/').pop());
@@ -52,25 +57,19 @@
         }
     }
 
-    // Load Preact via <script> (unpkg — no Preloader)
-    function loadPreact() {
+    async function loadExternalScript(url) {
         return new Promise((resolve, reject) => {
+            if (document.querySelector('script[src="' + url + '"]')) return resolve();
             const s = document.createElement('script');
-            s.src = 'https://unpkg.com/preact@10.19.3/dist/preact.min.js';
-            s.onload = () => {
-                const s2 = document.createElement('script');
-                s2.src = 'https://unpkg.com/preact@10.19.3/hooks/dist/hooks.umd.js';
-                s2.onload = () => resolve();
-                s2.onerror = () => reject(new Error('hooks failed'));
-                document.head.appendChild(s2);
-            };
-            s.onerror = () => reject(new Error('preact failed'));
+            s.src = url;
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error('Failed to load: ' + url));
             document.head.appendChild(s);
         });
     }
 
     // ============================================================
-    // STATE
+    // STATE — every option that UI can change
     // ============================================================
     const state = {
         visible: false,
@@ -360,6 +359,7 @@
                 { id: 'unique', label: 'Hribok Unique', comp: T.UniqueTab },
                 { id: 'effects', label: 'Effects', comp: T.EffectsTab },
                 { id: 'preview', label: 'Preview', comp: T.PreviewTab },
+                { id: 'misc', label: 'Misc', comp: T.MiscTab },
                 { id: 'players', label: 'Players', comp: T.PlayersTab },
                 { id: 'configs', label: 'Configs', comp: T.ConfigsTab },
                 { id: 'settings', label: 'Settings', comp: T.SettingsTab },
@@ -451,14 +451,15 @@
 
             // Load Preact
             log('Loading Preact...');
-            await loadPreact();
+            await loadExternalScript('https://unpkg.com/preact@10.19.3/dist/preact.min.js');
+            await loadExternalScript('https://unpkg.com/preact@10.19.3/hooks/dist/hooks.umd.js');
 
             if (!window.preact || !window.preactHooks) {
                 throw new Error('Preact failed to load');
             }
             log('Preact loaded');
 
-            // Load UI modules (via __hribokOriginalFetch — bypasses Preloader)
+            // Load UI modules (via GM_xmlhttpRequest — bypasses Preloader)
             log('Loading UI modules...');
             await loadScript(BASE + '/scripts/veck_ui_themes.js');
             await loadScript(BASE + '/scripts/veck_ui_components.js');
