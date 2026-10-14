@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Hribok Loader
 // @namespace   https://github.com/Hribok
-// @version     1.0.5
+// @version     1.0.6
 // @description Hribok — elite multi-game cheat framework for Unity WebGL
 // @author      Hribok
 // @match       *://*.veck.io/*
@@ -10,7 +10,11 @@
 // @match       *://*.narrow.one/*
 // @match       *://*buildnow-gg.game-files.crazygames.com/unity/unity2020/*
 // @run-at      document-start
-// @grant       none
+// @grant       GM_xmlhttpRequest
+// @grant       unsafeWindow
+// @connect     raw.githubusercontent.com
+// @connect     cdn.jsdelivr.net
+// @connect     unpkg.com
 // ==/UserScript==
 
 (function() {
@@ -24,32 +28,41 @@
     // Real window (bypass Tampermonkey sandbox)
     const W = (typeof unsafeWindow !== 'undefined') ? unsafeWindow : window;
 
-    // ============================================================
-    // CRITICAL: Save original fetch BEFORE UnityWebModkit hooks it
-    // ============================================================
-    try {
-        W.__hribokOriginalFetch = W.fetch.bind(W);
-        W.__hribokOriginalXHR = W.XMLHttpRequest;
-        console.log('%c[Hribok]%c Original fetch saved', LOG_HEAD, LOG_OK);
-    } catch (e) {
-        console.warn('%c[Hribok]%c Failed to save original fetch', LOG_HEAD, LOG_WARN, e);
-    }
-
-    console.log('%c[Hribok]%c Loader started (v1.0.5)', LOG_HEAD, LOG_OK);
+    console.log('%c[Hribok]%c Loader started (v1.0.6)', LOG_HEAD, LOG_OK);
 
     const BASE = 'https://raw.githubusercontent.com/Hribok/hribok-loader/main';
 
     // ============================================================
-    // SCRIPT LOADER — uses saved original fetch (bypasses Preloader)
+    // GM_xmlhttpRequest — bypasses UnityWebModkit Preloader entirely
+    // ============================================================
+    function gmFetch(url) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: url,
+                onload: (res) => {
+                    if (res.status >= 200 && res.status < 300) {
+                        resolve(res.responseText);
+                    } else {
+                        reject(new Error('HTTP ' + res.status));
+                    }
+                },
+                onerror: (err) => reject(new Error('GM_xmlhttpRequest failed')),
+                ontimeout: () => reject(new Error('Timeout')),
+                timeout: 15000,
+            });
+        });
+    }
+
+    // Expose to window so veck.js can use it
+    W.__hribokGmFetch = gmFetch;
+
+    // ============================================================
+    // SCRIPT LOADER — uses GM_xmlhttpRequest (bypasses Preloader)
     // ============================================================
     async function loadScript(url) {
         try {
-            const fetchFn = W.__hribokOriginalFetch || W.fetch;
-            const res = await fetchFn(url + '?t=' + Date.now());
-            if (!res.ok) {
-                throw new Error('HTTP ' + res.status);
-            }
-            const code = await res.text();
+            const code = await gmFetch(url + '?t=' + Date.now());
             const fn = new Function('window', 'document', 'globalThis', 'console', code);
             fn.call(W, W, W.document, W, console);
             console.log('%c[Hribok]%c Loaded: ' + url.split('/').pop(), LOG_HEAD, LOG_OK);
