@@ -128,4 +128,18 @@
         ]);
     }
 
+    // ============================================================
+    // AUTO-INIT
+    // ============================================================
+    if (window.preact) {
+        init();
+    } else {
+        const check = setInterval(() => {
+            if (window.preact) {
+                clearInterval(check);
+                init();
+            }
+        }, 50);
+    }
+
 })();
