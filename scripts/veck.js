@@ -1,14 +1,14 @@
 /**
  * Hribok — veck.io cheat
- * Version: 2.0.1
+ * Version: 2.0.2
  *
- * Fixed: loadScript uses GM_xmlhttpRequest (from hribok.user.js) to bypass Preloader.
+ * Added: WASM buffer check to extract globalMetadata.
  */
 
 (function () {
     'use strict';
 
-    const HRIBOK_VERSION = '2.0.1';
+    const HRIBOK_VERSION = '2.0.2';
     const LOG_HEAD = 'color: #FF0033; font-weight: bold;';
     const LOG_OK = 'color: #00FF88;';
     const LOG_WARN = 'color: #FFB300;';
@@ -35,7 +35,6 @@
         });
     }
 
-    // Uses GM_xmlhttpRequest (from hribok.user.js) — bypasses Preloader entirely
     async function loadScript(url) {
         try {
             let code;
@@ -415,6 +414,17 @@
 
             await waitForGlobal('UnityWebModkit');
             log('UnityWebModkit detected');
+
+            // ============================================================
+            // WASM BUFFER CHECK (from Tampermonkey)
+            // ============================================================
+            if (window._wasmBuffer) {
+                log('WASM buffer FOUND: ' + window._wasmBuffer.byteLength + ' bytes');
+                const first8 = Array.from(new Uint8Array(window._wasmBuffer, 0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+                log('Magic bytes: ' + first8);
+            } else {
+                warn('WASM buffer NOT FOUND in page context');
+            }
 
             const ctx = UnityWebModkit.Runtime.createPlugin({
                 name: 'Hribok',
