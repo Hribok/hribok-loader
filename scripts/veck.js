@@ -1,14 +1,14 @@
 /**
  * Hribok — veck.io cheat
- * Version: 2.0.3
+ * Version: 2.0.4
  *
- * Added: Auto-scan WASM buffer for class names.
+ * Fixed: WASM scanner now waits for buffer and runs at the end.
  */
 
 (function () {
     'use strict';
 
-    const HRIBOK_VERSION = '2.0.3';
+    const HRIBOK_VERSION = '2.0.4';
     const LOG_HEAD = 'color: #FF0033; font-weight: bold;';
     const LOG_OK = 'color: #00FF88;';
     const LOG_WARN = 'color: #FFB300;';
@@ -68,15 +68,23 @@
     }
 
     // ============================================================
-    // WASM SCANNER
+    // WASM SCANNER (with retry)
     // ============================================================
-    function scanWasmForClasses() {
+    async function scanWasmForClasses(retries = 5) {
+        if (window.__wasmScanned) return;
+        
         if (!window._wasmBuffer) {
-            warn('No WASM buffer to scan.');
+            if (retries > 0) {
+                warn('WASM buffer not ready yet, retrying in 1s... (' + retries + ')');
+                setTimeout(() => scanWasmForClasses(retries - 1), 1000);
+                return;
+            }
+            warn('No WASM buffer found after all retries.');
             return;
         }
         
-        log('Scanning WASM buffer for class names...');
+        window.__wasmScanned = true;
+        log('Scanning WASM buffer...');
         const bytes = new Uint8Array(window._wasmBuffer);
         let found = [];
         let str = "";
@@ -95,11 +103,8 @@
             }
         }
         
-        // Remove duplicates
         const unique = [...new Set(found)];
         log('SCAN COMPLETE. Found ' + unique.length + ' potential classes.');
-        
-        // Log first 100 for analysis
         console.log('%c=== WASM CLASS SCAN RESULTS ===', 'color: #FF0033; font-weight: bold; font-size: 14px;');
         console.log(unique.slice(0, 100));
     }
@@ -109,68 +114,21 @@
     // ============================================================
     const state = {
         visible: false, activeTab: 'aimbot', theme: 'red',
-        aimbot: {
-            enabled: false, aimType: 'aimbot', aimTarget: 'center', switchInterval: 0,
-            aimKey: 'LeftMouse', aimSpeed: 5, aimBone: 'Head', fov: false, fovSize: 90,
-            fovColor: '#FF0033', fovRainbow: false, stickyTargeting: false,
-            silentAim: false, psilent: false, hitchance: 50, minDamage: 1,
-            autoWall: false, backtrack: false, visibleCheck: true, visibleMode: 'Only when visible',
-        },
-        player: {
-            bhop: false, autoStrafe: false, speed: 0, fly: false, flySpeed: 1000,
-            noGravity: false, slopeAngle: 65.8, stepHeight: 0.2, jumpHeight: 10,
-            gravity: -24.5, noKnockback: false, invisibility: false, godMode: false,
-            noFallDamage: false, fakeLag: false, antiAim: false, desync: false, thirdPerson: false,
-        },
-        gun: {
-            hoverToKill: false, killKey: 'LeftMouse', killMode: 'Only Visible',
-            weaponMode: 'Auto', autoDistance: 500, knifeDistance: 50,
-            killDelayMode: 'Off', killDelayMin: 150, killDelayMax: 250,
-            aimBone: 'Chest', boneRandomChance: 20, visibleCheck: true,
-            throughSmoke: false, throughWall: false, missChance: 0, missSpread: 2,
-            tapFire: false, burstFire: false, showIndicator: false,
-            indicatorColor: '#FF0033', indicatorStyle: 'Dot',
-            triggerBot: false, autoFire: false, wallbang: false, damage: 150,
-            damageMultiplier: 1, oneShot: false, bulletHitRandom: false,
-            fastReload: false, fastSwitch: false, infiniteAmmo: false, infiniteRange: false,
-            noRecoil: false, noSpread: false, noPunch: false, fireRate: false,
-            noAbilityCooldown: false, statTrak: false, nameTag: false, sticker: false,
-            float: 0, pattern: 0, wear: 'Factory New', quality: 'Normal', autoBuy: false, autoPistol: false,
-        },
-        visuals: {
-            noFlash: false, noSmoke: false, transparentShield: false, fullbright: false,
-            noScope: false, fovChanger: 90, chams: false, chamsColor: '#FF0033', chamsWireframe: false,
-            handsChams: false, handsColor: '#FF0033', playerVisibleColor: '#00FF00',
-            glow: false, glowColor: '#FF0033', globalEsp: false, boxEsp: false, boxThickness: 6, boxColor: '#FF0033', boxRainbow: false,
-            cornerBoxEsp: false, cornerBoxThickness: 7.1, cornerBoxColor: '#FF0033',
-            skeletonEsp: false, skeletonThickness: 9.3, skeletonColor: '#0033FF',
-            filledBoxEsp: false, filledBoxColor: '#880000', tracerEsp: false, tracerThickness: 2, tracerColor: '#FF0033',
-            tracerFrom: 'Bottom', tracerTo: 'Head', bulletTracer: false, grenadeTracer: false, grenadePrediction: false,
-            nameEsp: false, nameSize: 16, nameColor: '#FFFFFF', healthBar: false, healthText: false,
-            distanceEsp: false, distanceColor: '#FFFFFF', gunEsp: false, ammoEsp: false, armorBar: false, flags: false, radar: false,
-        },
-        skinchanger: {
-            enabled: false, mode: 'CS2', ak47: 'Default', m4a4: 'Default', m4a1s: 'Default', awp: 'Default',
-            deagle: 'Default', usps: 'Default', glock: 'Default', solidColor: '#FF0033', rainbow: false, metallic: 0, glow: false,
-            knifeEnabled: false, knifeType: 'Default', knifeSkin: 'Default', gloveEnabled: false, gloveType: 'Default',
-            agentEnabled: false, agentType: 'Default', cs2Style: true, statTrak: false, nameTag: false, sticker: false, float: 0, pattern: 0,
-        },
+        aimbot: { enabled: false, aimType: 'aimbot', aimTarget: 'center', switchInterval: 0, aimKey: 'LeftMouse', aimSpeed: 5, aimBone: 'Head', fov: false, fovSize: 90, fovColor: '#FF0033', fovRainbow: false, stickyTargeting: false, silentAim: false, psilent: false, hitchance: 50, minDamage: 1, autoWall: false, backtrack: false, visibleCheck: true, visibleMode: 'Only when visible' },
+        player: { bhop: false, autoStrafe: false, speed: 0, fly: false, flySpeed: 1000, noGravity: false, slopeAngle: 65.8, stepHeight: 0.2, jumpHeight: 10, gravity: -24.5, noKnockback: false, invisibility: false, godMode: false, noFallDamage: false, fakeLag: false, antiAim: false, desync: false, thirdPerson: false },
+        gun: { hoverToKill: false, killKey: 'LeftMouse', killMode: 'Only Visible', weaponMode: 'Auto', autoDistance: 500, knifeDistance: 50, killDelayMode: 'Off', killDelayMin: 150, killDelayMax: 250, aimBone: 'Chest', boneRandomChance: 20, visibleCheck: true, throughSmoke: false, throughWall: false, missChance: 0, missSpread: 2, tapFire: false, burstFire: false, showIndicator: false, indicatorColor: '#FF0033', indicatorStyle: 'Dot', triggerBot: false, autoFire: false, wallbang: false, damage: 150, damageMultiplier: 1, oneShot: false, bulletHitRandom: false, fastReload: false, fastSwitch: false, infiniteAmmo: false, infiniteRange: false, noRecoil: false, noSpread: false, noPunch: false, fireRate: false, noAbilityCooldown: false, statTrak: false, nameTag: false, sticker: false, float: 0, pattern: 0, wear: 'Factory New', quality: 'Normal', autoBuy: false, autoPistol: false },
+        visuals: { noFlash: false, noSmoke: false, transparentShield: false, fullbright: false, noScope: false, fovChanger: 90, chams: false, chamsColor: '#FF0033', chamsWireframe: false, handsChams: false, handsColor: '#FF0033', playerVisibleColor: '#00FF00', glow: false, glowColor: '#FF0033', globalEsp: false, boxEsp: false, boxThickness: 6, boxColor: '#FF0033', boxRainbow: false, cornerBoxEsp: false, cornerBoxThickness: 7.1, cornerBoxColor: '#FF0033', skeletonEsp: false, skeletonThickness: 9.3, skeletonColor: '#0033FF', filledBoxEsp: false, filledBoxColor: '#880000', tracerEsp: false, tracerThickness: 2, tracerColor: '#FF0033', tracerFrom: 'Bottom', tracerTo: 'Head', bulletTracer: false, grenadeTracer: false, grenadePrediction: false, nameEsp: false, nameSize: 16, nameColor: '#FFFFFF', healthBar: false, healthText: false, distanceEsp: false, distanceColor: '#FFFFFF', gunEsp: false, ammoEsp: false, armorBar: false, flags: false, radar: false },
+        skinchanger: { enabled: false, mode: 'CS2', ak47: 'Default', m4a4: 'Default', m4a1s: 'Default', awp: 'Default', deagle: 'Default', usps: 'Default', glock: 'Default', solidColor: '#FF0033', rainbow: false, metallic: 0, glow: false, knifeEnabled: false, knifeType: 'Default', knifeSkin: 'Default', gloveEnabled: false, gloveType: 'Default', agentEnabled: false, agentType: 'Default', cs2Style: true, statTrak: false, nameTag: false, sticker: false, float: 0, pattern: 0 },
         butterfly: { enabled: false, speed: 3, color: '#FF0033', rainbow: false, size: 1, trail: false, trailColor: '#FF0033', model: 'Default', sound: false },
         spin: { enabled: false, speed: 30, axis: 'Y', mode: 'Continuous', onKill: false, onHit: false },
         skybox: { enabled: false, preset: 'Default', color: '#000000', rainbow: false, rotation: 0, brightness: 100 },
         customModel: { enabled: false, catalog: 'Default', scale: 1, rotation: 0, offsetX: 0, offsetY: 0, rainbow: false, wireframe: false },
         customHands: { enabled: false, catalog: 'Default', color: '#FF0033', rainbow: false },
         customWeapon: { enabled: false, catalog: 'Default', skin: 'Default', rainbow: false },
-        grenade: {
-            direction: false, dirStyle: 'Arrow', dirColor: '#FF0033', dirThickness: 3, dirFade: false,
-            magnet: false, magnetMode: 'Auto', magnetFov: 90, magnetStrength: 50, magnetPriority: 'Nearest', magnetVisible: true, magnetPrediction: true,
-        },
+        grenade: { direction: false, dirStyle: 'Arrow', dirColor: '#FF0033', dirThickness: 3, dirFade: false, magnet: false, magnetMode: 'Auto', magnetFov: 90, magnetStrength: 50, magnetPriority: 'Nearest', magnetVisible: true, magnetPrediction: true },
         watermark: { enabled: true, text: 'Hribok | User', position: 'Top-Right', color: '#FF0033', size: 14, rainbow: false, tagEnabled: true, tagMode: 'Everyone', tagColor: '#FF0033' },
         unique: { ai: false, cloud: false, stats: false, replay: false, highlights: false, api: false, marketplace: false, butterfly: false },
-        effects: {
-            killEffect: false, killEffectType: 'Explosion', hitEffect: false, hitEffectType: 'Spark', killSoundPack: 'Default', hitSoundPack: 'Default',
-            crosshair: false, crosshairStyle: 'Cross', crosshairColor: '#FF0033', crosshairSize: 4, worldParticles: false, trailBehind: false,
-        },
+        effects: { killEffect: false, killEffectType: 'Explosion', hitEffect: false, hitEffectType: 'Spark', killSoundPack: 'Default', hitSoundPack: 'Default', crosshair: false, crosshairStyle: 'Cross', crosshairColor: '#FF0033', crosshairSize: 4, worldParticles: false, trailBehind: false },
         preview: { enabled: true, position: 'Right', size: 300, showPlayer: true, showWeapon: true, autoRotate: true, rotateSpeed: 1 },
         configs: { customs: ['My Config 1', 'My Config 2'] },
         settings: { menuKey: 'P', godmodeKey: 'None', wallbangKey: 'None', chamsKey: 'F', espKey: 'None', loadoutKey: 'None', invisibilityKey: 'None', flyKey: 'None', uiScale: 100, opacity: 95, showWatermark: true, streamProof: false },
@@ -284,9 +242,6 @@
             await waitForGlobal('UnityWebModkit');
             log('UnityWebModkit detected');
 
-            // Auto-scan WASM
-            scanWasmForClasses();
-
             const ctx = UnityWebModkit.Runtime.createPlugin({
                 name: 'Hribok', version: HRIBOK_VERSION,
                 referencedAssemblies: [ 'ACTk.Runtime.dll', 'GameAssembly.dll', 'System.Runtime.InteropServices.dll', 'mscorlib.dll', 'PhotonRealtime.dll', 'PhotonUnityNetworking.dll', 'PhotonUnityNetworking.Utilities.dll', 'Assembly-CSharp.dll', 'UnityEngine.CoreModule.dll', 'UnityEngine.PhysicsModule.dll', 'StompyRobot.SRDebugger.dll', 'UnityEngine.IMGUIModule.dll', 'Photon3Unity3D.dll', 'Unity.TextMeshPro.dll', 'FishNet.Runtime.dll', 'UnityEngine.AnimationModule.dll' ],
@@ -322,6 +277,10 @@
             window.preact.render(window.preact.h(Menu), root);
 
             log('UI rendered. Press ' + state.settings.menuKey + ' to toggle menu.');
+
+            // Scan WASM AFTER UI loads
+            await scanWasmForClasses();
+
         } catch (e) { err('Init failed:', e); }
     })();
 })();
