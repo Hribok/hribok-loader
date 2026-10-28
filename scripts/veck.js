@@ -1,14 +1,14 @@
 /**
  * Hribok — veck.io cheat
- * Version: 2.0.5
+ * Version: 2.0.6
  *
- * Updated: New beautiful CSS, 10 themes support.
+ * Updated: Fixed tabs UI, beautiful CSS, 10 themes support.
  */
 
 (function () {
     'use strict';
 
-    const HRIBOK_VERSION = '2.0.5';
+    const HRIBOK_VERSION = '2.0.6';
     const LOG_HEAD = 'color: #FF0033; font-weight: bold;';
     const LOG_OK = 'color: #00FF88;';
     const LOG_WARN = 'color: #FFB300;';
@@ -140,7 +140,7 @@
     };
 
     // ============================================================
-    // STYLES (UPDATED)
+    // STYLES (UPDATED 2.0.6)
     // ============================================================
     function injectStyles() {
         if (document.getElementById('hribok-styles')) return;
@@ -168,12 +168,44 @@
             .hb-close { margin-left: 16px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; color: var(--hb-text-muted); cursor: pointer; border-radius: 4px; transition: all 0.2s; font-size: 16px; }
             .hb-close:hover { background: var(--hb-accent-dim); color: var(--hb-accent); transform: rotate(90deg); }
             
-            .hb-sidebar { width: 180px; background: var(--hb-bg-sidebar); border-right: 1px solid var(--hb-accent-border); padding-top: 68px; display: flex; flex-direction: column; padding-bottom: 12px; overflow-y: auto; }
+            /* SIDEBAR & TABS */
+            .hb-sidebar { 
+                width: 200px; 
+                background: var(--hb-bg-sidebar); 
+                border-right: 1px solid var(--hb-accent-border); 
+                padding-top: 68px; 
+                display: flex; 
+                flex-direction: column; 
+                padding: 68px 12px 12px 12px;
+                overflow-y: auto; 
+            }
             .hb-sidebar::-webkit-scrollbar { width: 4px; }
             .hb-sidebar::-webkit-scrollbar-thumb { background: var(--hb-accent-dim); border-radius: 2px; }
-            .hb-tab { padding: 10px 20px; color: var(--hb-text-dim); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; border-left: 2px solid transparent; user-select: none; position: relative; overflow: hidden; }
-            .hb-tab:hover { color: var(--hb-text); background: var(--hb-accent-hover); padding-left: 24px; }
-            .hb-tab.active { color: var(--hb-accent); background: var(--hb-accent-hover); border-left-color: var(--hb-accent); box-shadow: inset 4px 0 16px var(--hb-accent-dim); }
+            .hb-tab { 
+                padding: 12px 16px; 
+                color: var(--hb-text-dim); 
+                font-size: 13px; 
+                font-weight: 600; 
+                cursor: pointer; 
+                transition: all 0.2s; 
+                border-radius: 8px; 
+                margin-bottom: 4px; 
+                user-select: none; 
+                text-align: center; 
+                text-transform: uppercase; 
+                letter-spacing: 0.5px;
+            }
+            .hb-tab:hover { 
+                color: var(--hb-text); 
+                background: var(--hb-accent-hover); 
+                transform: translateX(4px); 
+            }
+            .hb-tab.active { 
+                color: #FFF; 
+                background: var(--hb-accent); 
+                box-shadow: 0 4px 15px var(--hb-accent-glow); 
+                font-weight: 700;
+            }
             
             .hb-content { flex: 1; padding: 68px 24px 24px; overflow-y: auto; overflow-x: hidden; }
             .hb-content::-webkit-scrollbar { width: 6px; }
