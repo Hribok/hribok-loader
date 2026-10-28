@@ -1,172 +1,69 @@
 /**
- * Hribok UI — Tabs: System
- * Players, Configs, Settings, Credits
+ * Hribok UI — System Tabs
  */
 
 (function () {
     'use strict';
-
-    let h = null;
-    let C = null;
+    let h = null, C = null;
 
     function init() {
         if (!window.preact) return;
         h = window.preact.h;
         C = window.HribokComponents;
-
         window.HribokTabs = window.HribokTabs || {};
-        window.HribokTabs.PlayersTab = PlayersTab;
-        window.HribokTabs.ConfigsTab = ConfigsTab;
-        window.HribokTabs.SettingsTab = SettingsTab;
-        window.HribokTabs.CreditsTab = CreditsTab;
-
+        Object.assign(window.HribokTabs, { MiscTab, PlayersTab, ConfigsTab, SettingsTab, CreditsTab });
         console.log('[Hribok] System tabs loaded');
     }
 
-    // ============================================================
-    // PLAYERS
-    // ============================================================
+    function MiscTab({ state, setState }) {
+        return h('div', null, [
+            h(C.SectionTitle, { key: 'm1' }, 'MISC'),
+            h(C.Placeholder, { key: 'm2', name: 'Misc' }),
+        ]);
+    }
+
     function PlayersTab({ state, setState }) {
-        const players = [
-            { name: 'You', hp: 100, tag: 'Hr', isFriend: true },
-            { name: 'Enemy1', hp: 85, tag: null, isFriend: false },
-        ];
-
         return h('div', null, [
-            h(C.SectionTitle, { key: 't' }, 'PLAYERS (' + players.length + ')'),
-            ...players.map((p, i) => h('div', {
-                key: 'p' + i,
-                class: 'hb-row',
-                style: 'display:flex;align-items:center;justify-content:space-between;gap:8px;'
-            }, [
-                h('div', { style: 'display:flex;align-items:center;gap:8px;' }, [
-                    h('div', {
-                        style: 'width:8px;height:8px;border-radius:50%;background:' + (p.isFriend ? '#00FF88' : '#FF0033') + ';'
-                    }),
-                    h('div', { style: 'color:var(--hb-text);font-size:13px;font-weight:500;' }, p.name),
-                    p.tag ? h('span', {
-                        style: 'color:var(--hb-accent);font-size:11px;font-weight:600;background:var(--hb-accent-dim);padding:1px 6px;border-radius:3px;'
-                    }, p.tag) : null,
-                ]),
-            ])),
+            h(C.SectionTitle, { key: 'pl1' }, 'PLAYERS'),
+            h(C.Placeholder, { key: 'pl2', name: 'Players List' }),
         ]);
     }
 
-    // ============================================================
-    // CONFIGS (18)
-    // ============================================================
     function ConfigsTab({ state, setState }) {
-        const s = state.configs || (state.configs = {});
-        const presets = ['Legit', 'Rage', 'HvH', 'Scout', 'Sniper', 'Visuals Only', 'Farm'];
-        const customs = s.customs || ['My Config 1', 'My Config 2'];
-
-        const onSave = () => {
-            const name = prompt('Config name:');
-            if (!name) return;
-            customs.push(name);
-            state.configs.customs = customs;
-            setState({});
-            console.log('[Hribok] Saved config:', name);
-        };
-
-        const onDelete = (name) => {
-            const idx = customs.indexOf(name);
-            if (idx !== -1) {
-                customs.splice(idx, 1);
-                state.configs.customs = customs;
-                setState({});
-                console.log('[Hribok] Deleted config:', name);
-            }
-        };
-
+        const s = state.configs;
         return h('div', null, [
-            h('div', { style: 'display:flex;gap:8px;margin-bottom:16px;' }, [
-                h(C.Button, { label: '+ Save Current', onClick: onSave }),
-                h(C.Button, { label: 'Export', onClick: () => console.log('Export') }),
-                h(C.Button, { label: 'Import', onClick: () => console.log('Import') }),
-            ]),
-
-            h(C.SectionTitle, { key: 't1' }, 'PRESETS'),
-            ...presets.map((cfg, i) => h(C.Row, { key: 'c' + i, label: cfg },
-                h('div', { style: 'display:flex;gap:6px;' }, [
-                    h(C.Button, { label: 'Load', onClick: () => console.log('Load:', cfg) }),
-                ])
-            )),
-
-            h(C.SectionTitle, { key: 't2' }, 'MY CONFIGS (' + customs.length + ')'),
-            ...customs.map((cfg, i) => h(C.Row, { key: 'm' + i, label: cfg },
-                h('div', { style: 'display:flex;gap:6px;' }, [
-                    h(C.Button, { label: 'Load', onClick: () => console.log('Load:', cfg) }),
-                    h(C.Button, { label: 'Delete', variant: 'danger', onClick: () => onDelete(cfg) }),
-                ])
-            )),
-
-            h(C.SectionTitle, { key: 't3' }, 'ACTIONS'),
-            h(C.Row, { key: 'r1', label: 'Reset to default' },
-                h(C.Button, { label: 'Reset', variant: 'danger', onClick: () => console.log('Reset') })
-            ),
+            h(C.SectionTitle, { key: 'c1' }, 'CONFIGS'),
+            h(C.Row, { key: 'c2', label: 'Config List' }, h(C.Dropdown, { value: s.customs[0], options: s.customs, onChange: v => {} })),
+            h(C.Row, { key: 'c3', label: 'Save' }, h(C.Button, { label: 'SAVE', onClick: () => {} })),
+            h(C.Row, { key: 'c4', label: 'Load' }, h(C.Button, { label: 'LOAD', onClick: () => {} })),
+            h(C.Row, { key: 'c5', label: 'Delete' }, h(C.Button, { label: 'DELETE', variant: 'danger', onClick: () => {} })),
         ]);
     }
 
-    // ============================================================
-    // SETTINGS (Оновлено)
-    // ============================================================
     function SettingsTab({ state, setState }) {
         const s = state.settings;
-        const upd = (k, v) => { state.settings[k] = v; setState({}); };
-        const keys = ['None', 'P', 'F', 'G', 'H', 'J', 'K', 'L', 'X', 'C', 'V', 'B', 'N', 'M'];
-        
-        // Беремо список тем динамічно з HribokTheme
-        const themes = window.HribokTheme ? window.HribokTheme.list() : ['red', 'black', 'white', 'purple', 'blue'];
-
+        const u = (k, v) => { s[k] = v; setState({}); };
         return h('div', null, [
-            h(C.SectionTitle, { key: 't1' }, 'THEME'),
-            h(C.Row, { key: 'r0', label: 'Theme' }, h(C.Dropdown, {
-                value: state.theme || 'red',
-                options: themes,
-                onChange: v => {
-                    state.theme = v;
-                    if (window.HribokTheme) window.HribokTheme.apply(v);
-                    setState({});
-                }
-            })),
-
-            h(C.SectionTitle, { key: 't2' }, 'KEYBINDS'),
-            h(C.Row, { key: 'r1', label: 'Menu Toggle Key' }, h(C.Dropdown, { value: s.menuKey, options: keys, onChange: v => upd('menuKey', v) })),
-            h(C.Row, { key: 'r2', label: 'Godmode Key' }, h(C.Dropdown, { value: s.godmodeKey, options: keys, onChange: v => upd('godmodeKey', v) })),
-            h(C.Row, { key: 'r3', label: 'Wallbang Key' }, h(C.Dropdown, { value: s.wallbangKey, options: keys, onChange: v => upd('wallbangKey', v) })),
-            h(C.Row, { key: 'r4', label: 'Chams Key' }, h(C.Dropdown, { value: s.chamsKey, options: keys, onChange: v => upd('chamsKey', v) })),
-            h(C.Row, { key: 'r5', label: 'ESP Key' }, h(C.Dropdown, { value: s.espKey, options: keys, onChange: v => upd('espKey', v) })),
-            h(C.Row, { key: 'r6', label: 'Fly Key' }, h(C.Dropdown, { value: s.flyKey, options: keys, onChange: v => upd('flyKey', v) })),
+            h(C.SectionTitle, { key: 'st1' }, 'SETTINGS'),
+            h(C.Row, { key: 'st2', label: 'Menu Key' }, h(C.Dropdown, { value: s.menuKey, options: ['P', 'Insert', 'Delete', 'F1', 'F2'], onChange: v => u('menuKey', v) })),
+            h(C.Row, { key: 'st3', label: 'UI Scale' }, h(C.Slider, { value: s.uiScale, min: 50, max: 150, step: 1, onChange: v => u('uiScale', v) })),
+            h(C.Row, { key: 'st4', label: 'Opacity' }, h(C.Slider, { value: s.opacity, min: 50, max: 100, step: 1, onChange: v => u('opacity', v) })),
+            h(C.Row, { key: 'st5', label: 'Show Watermark' }, h(C.Toggle, { value: s.showWatermark, onChange: v => u('showWatermark', v) })),
+            h(C.Row, { key: 'st6', label: 'Stream Proof' }, h(C.Toggle, { value: s.streamProof, onChange: v => u('streamProof', v) })),
         ]);
     }
 
-    // ============================================================
-    // CREDITS
-    // ============================================================
-    function CreditsTab() {
+    function CreditsTab({ state, setState }) {
         return h('div', null, [
-            h(C.SectionTitle, { key: 't' }, 'CREDITS'),
-            h(C.Row, { key: 'r1', label: 'Developer' }, h('span', { style: 'color:var(--hb-text);font-size:13px;' }, 'Hribok')),
-            h(C.Row, { key: 'r2', label: 'Framework' }, h('span', { style: 'color:var(--hb-text);font-size:13px;' }, 'UnityWebModkit')),
-            h(C.Row, { key: 'r3', label: 'UI Framework' }, h('span', { style: 'color:var(--hb-text);font-size:13px;' }, 'Preact')),
-            h(C.Row, { key: 'r4', label: 'Version' }, h('span', { style: 'color:var(--hb-text);font-size:13px;' }, 'v2.0.6')),
-            h(C.Row, { key: 'r5', label: 'Discord' },
-                h(C.Button, { label: 'Join', onClick: () => window.open('https://discord.gg/hribok4ek', '_blank') })
-            ),
+            h(C.SectionTitle, { key: 'cr1' }, 'CREDITS'),
+            h('div', { style: 'text-align:center; padding: 20px; color: #E0E0E0;' }, [
+                h('div', { style: 'font-size: 24px; font-weight: 700; color: var(--hb-accent); margin-bottom: 12px;' }, 'Hribok'),
+                h('div', { style: 'font-size: 14px; margin-bottom: 4px;' }, 'Created by Hribok & RedHat'),
+                h('div', { style: 'font-size: 12px; color: #888; margin-top: 16px;' }, 'Onyx still Nyx. 6767.'),
+            ]),
         ]);
     }
 
-    // Register
-    if (window.HribokComponents) {
-        init();
-    } else {
-        const check = setInterval(() => {
-            if (window.HribokComponents) {
-                clearInterval(check);
-                init();
-            }
-        }, 50);
-    }
-
+    if (window.HribokComponents) init();
+    else { const c = setInterval(() => { if (window.HribokComponents) { clearInterval(c); init(); } }, 50); }
 })();
