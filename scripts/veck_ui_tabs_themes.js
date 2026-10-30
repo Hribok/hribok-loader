@@ -1,5 +1,5 @@
 /**
- * Hribok UI — Themes Tab (Elite Version)
+ * Hribok UI — Themes Tab (Elite + Animated)
  */
 
 (function () {
@@ -32,21 +32,27 @@
                 onChange: v => { s.animated = v; setState({}); }
             })),
             
-            // Сітка з темами
             h('div', { style: 'display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;' },
                 themes.map(t => {
                     const isActive = s.current === t.id;
+                    const isAnimated = t.type === 'animated';
+                    
+                    // Якщо анімована і увімкнено анімацію — додаємо градієнт
+                    let bgStyle = 'background: var(--hb-bg-row);';
+                    if (isAnimated && s.animated) {
+                        bgStyle = 'background: linear-gradient(90deg, ' + t.accent + '22, ' + t.accent + '11);';
+                    }
+                    
                     return h('div', {
                         key: t.id,
-                        style: 'background: var(--hb-bg-row); border: 1px solid ' + (isActive ? 'var(--hb-accent)' : 'var(--hb-accent-border)') + '; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s;' + (isActive ? ' box-shadow: 0 0 15px var(--hb-accent-glow);' : ''),
+                        style: bgStyle + 'border: 1px solid ' + (isActive ? 'var(--hb-accent)' : 'var(--hb-accent-border)') + '; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.3s;' + (isActive ? ' box-shadow: 0 0 20px ' + t.accent + '44;' : ''),
                         onClick: () => applyTheme(t.id)
                     }, [
                         h('div', { style: 'display: flex; align-items: center; gap: 10px;' }, [
-                            // Кольоровий кружечок
-                            h('div', { style: 'width: 16px; height: 16px; border-radius: 50%; background: ' + t.accent + '; box-shadow: 0 0 10px ' + t.accent + ';' }),
-                            h('span', { style: 'color: ' + (isActive ? 'var(--hb-accent)' : 'var(--hb-text-label)') + '; font-size: 13px; font-weight: 500;' }, t.name)
+                            h('div', { style: 'width: 18px; height: 18px; border-radius: 50%; background: ' + t.accent + '; box-shadow: 0 0 12px ' + t.accent + ';' }),
+                            h('span', { style: 'color: ' + (isActive ? 'var(--hb-accent)' : 'var(--hb-text-label)') + '; font-size: 13px; font-weight: 600;' }, t.name)
                         ]),
-                        isActive ? h('span', { style: 'color: var(--hb-accent); font-size: 11px; font-weight: 700;' }, 'ACTIVE') : null
+                        isActive ? h('span', { style: 'color: var(--hb-accent); font-size: 10px; font-weight: 800; letter-spacing: 1px;' }, 'ACTIVE') : null
                     ]);
                 })
             )
