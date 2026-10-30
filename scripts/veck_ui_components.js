@@ -11,6 +11,15 @@
         h = window.preact.h;
         window.HribokComponents = { h, Toggle, Slider, Dropdown, ColorPicker, Row, SectionTitle, Button, Placeholder, Group, Icon };
         console.log('[Hribok] Components module loaded');
+
+        // JS-ФІКС ДЛЯ ТАЧПАДА
+        window.addEventListener('wheel', function(e) {
+            const content = e.target.closest('.hb-content');
+            if (content) {
+                content.scrollTop += e.deltaY;
+                e.preventDefault();
+            }
+        }, { passive: false });
     }
 
     function Toggle({ value, onChange }) {
